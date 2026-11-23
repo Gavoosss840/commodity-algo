@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {"name": "Daily run (IB paper)", "type": "debugpy", "request": "launch", "module": "commodity_algo",
+     "args": ["run"], "cwd": "${workspaceFolder}", "console": "integratedTerminal"},
+    {"name": "Daily run (no IB, Yahoo prices)", "type": "debugpy", "request": "launch", "module": "commodity_algo",
+     "args": ["run", "--no-ib"], "cwd": "${workspaceFolder}", "console": "integratedTerminal"},
+    {"name": "First-time backfill", "type": "debugpy", "request": "launch", "module": "commodity_algo",
+     "args": ["update", "--full"], "cwd": "${workspaceFolder}", "console": "integratedTerminal"},
+    {"name": "Backtest corn (with robustness)", "type": "debugpy", "request": "launch", "module": "commodity_algo",
+     "args": ["backtest", "--market", "corn", "--start", "2019-01-01", "--robust", "--every", "5"],
+     "cwd": "${workspaceFolder}", "console": "integratedTerminal"},
+    {"name": "Test IB connection", "type": "debugpy", "request": "launch", "module": "commodity_algo",
+     "args": ["test-ib"], "cwd": "${workspaceFolder}", "console": "integratedTerminal"}
+  ]
+}

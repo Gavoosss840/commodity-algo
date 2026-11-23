@@ -1,0 +1,9 @@
+# USDA WASDE balance sheets - add ONE ROW PER MARKET after each WASDE (about 2 minutes).
+# Source: https://www.usda.gov/oce/commodity/wasde  (US table for corn/soybeans, world table for wheat)
+# Units: area in million acres, yield in bu/acre, stocks/production/use in MILLION bushels,
+#        china_imports & brazil_production in million metric tons.
+# The 2026-10-09 corn/soy rows come from the strategy document (case study, section 2.3).
+# Fields left EMPTY must be filled from the report before the model can run (the algo tells you which).
+report_date,market,marketing_year,area_harvested_macres,usda_yield,beginning_stocks,production,imports,total_use,exports,ending_stocks,china_imports,brazil_production,world_ex_us_china_stocks,world_ex_us_china_use,notes
+2026-10-09,corn,2026/27,,181.2,,16034,,,,1849,,,,,"from strategy doc: fill area/beginning stocks/imports/total use/china imports from WASDE p.12 and p.22"
+2026-10-09,soybeans,2026/27,,53.1,,4562,,,,315,,,,,"from strategy doc: fill remaining fields from WASDE"

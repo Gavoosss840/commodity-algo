@@ -1,0 +1,226 @@
+# =============================================================================
+# Commodity decision-support algorithm - main configuration
+# Every number here comes from the strategy document (Oct 31 2026) unless
+# marked "VERIFY". Change values here, never in the code.
+# =============================================================================
+
+account:
+  # Used only when Interactive Brokers is not connected. When connected, the
+  # algo reads NetLiquidation from the account and uses it instead.
+  capital_usd: 50000
+  # Stage of the roadmap (Part 3.4): 0 = paper account, 1 = specialisation...
+  roadmap_stage: 0
+
+ib:
+  host: 127.0.0.1
+  # 7497 = TWS paper, 7496 = TWS live, 4002 = IB Gateway paper, 4001 = Gateway live
+  port: 7497
+  client_id: 17
+  # 1 = live data (needs CBOT level-1 subscription, ~1.25 USD/month),
+  # 3 = delayed (free). Delayed is fine for a daily end-of-day fiche.
+  market_data_type: 3
+  # Never transmit automatically. Staged orders appear in TWS, you click "Transmit".
+  stage_orders_transmit: false
+  # Refuse to stage orders on a live account unless this is set to true.
+  allow_live_account_orders: false
+
+# --- Risk framework (strategy section 1.3 and 1.4) ---------------------------
+risk:
+  risk_per_trade_pct: 0.75          # default budget, inside the 0.5-1 % band
+  risk_per_trade_min_pct: 0.5
+  risk_per_trade_max_pct: 1.0
+  max_total_open_risk_pct: 6.0
+  max_group_risk_pct: 3.0           # energy / grains / livestock
+  monthly_loss_halving_pct: -4.0    # size / 2 until month end
+  max_drawdown_stop_pct: -10.0      # full stop + model review
+  max_adv_fraction: 0.01            # position < 1 % of contract daily volume
+  cash_margin_multiple: 3.0         # keep >= 3x initial margin in cash
+
+# --- Signal rules (section 1.3, "les cinq regles") ---------------------------
+signal:
+  z_entry: 2.0
+  catalyst_window_business_days: 15
+  atr_period: 20
+  catastrophe_atr_mult: 2.5
+  trailing_atr_mult: 1.0
+  partial_exit_1_fraction_of_gap: 0.5     # exit 1/3 - 1/2 of size here
+  partial_exit_2_fraction_of_gap: 0.667   # second third here
+  partial_exit_1_size: 0.5
+  partial_exit_2_size: 0.25               # remainder trails at 1 ATR
+  time_stop_catalysts: 2                  # exit if gap not reduced after 2 releases
+  thesis_break_fraction: 0.5              # fair value moved against us by >50 % of entry gap
+  trend_filter:
+    lookback_days: 63                     # ~3 months
+    max_adverse_sigma: 2.0                # block if 3m move against us > 2 sigma
+  carry_filter:
+    max_adverse_annualized_pct: 15.0      # block if roll yield against us > 15 %/yr
+  option_ratio_min: 1.3                   # our expected move / implied move (section 1.6)
+  no_new_position_day_before_major_report: true
+
+# --- Fair-value model (section 1.2) -------------------------------------------
+model:
+  # lambda = 0.99 per week -> half-life ~69 weeks. Converted to daily internally.
+  forgetting_lambda_weekly: 0.99
+  calibration_window_days: 750            # trading days used to anchor the intercept
+  # Betas are re-estimated on accumulated daily data once this many rows exist.
+  # Before that, the betas from the study (below) are used as-is.
+  min_obs_reestimate: 500
+  # Shrinkage toward the study betas when re-estimating (0 = pure data,
+  # larger = stay closer to the study). Measured in "pseudo-observations".
+  prior_strength_obs: 250
+  beta_alert_sigma: 2.0                   # alert if beta leaves prior +/- 2 se
+  residual_alert_ratio: 1.5               # suspend if recent residual sd > 1.5x long-run
+
+# --- Markets -----------------------------------------------------------------
+# point_value_usd = USD value of 1.0 unit of the quoted price
+#   grains quoted in cents/bushel  -> ZC: 5000 bu * 0.01 = 50 USD per cent
+#   WTI quoted in USD/bbl         -> CL: 1000 USD per 1 USD
+markets:
+  corn:
+    enabled: true
+    group: grains
+    label: "Corn (CBOT)"
+    model: grain_two_stage
+    price_unit: "cents/bu"
+    deflator: CPIAUCSL
+    catalysts: [WASDE, GRAIN_STOCKS, ACREAGE, PROSPECTIVE_PLANTINGS]  # weekly Crop Progress shown in calendar only
+    major_reports: [WASDE, GRAIN_STOCKS, ACREAGE, PROSPECTIVE_PLANTINGS]
+    jump_allowance: 30.0      # cents; approx CBOT daily limit - VERIFY on cmegroup.com
+    yahoo_symbol: "ZC=F"      # fallback price history when IB is not connected
+    contracts:
+      micro:    {symbol: MZC, exchange: CBOT, point_value_usd: 5.0,  tick: 0.5,  multiplier: 500}
+      standard: {symbol: ZC,  exchange: CBOT, point_value_usd: 50.0, tick: 0.25, multiplier: 5000}
+    options_symbol: OZC
+    roll_business_days_before_expiry: 10
+    # Stage 2: balance sheet + macro -> log real price (study section 4, etage 2)
+    price_factors:
+      log_usd:            {beta: -1.31,  se: 0.113, series: DTWEXBGS, transform: log}
+      log_stocks_to_use:  {beta: -0.40,  se: 0.047, series: corn_stocks_to_use_nowcast, transform: log}
+      real_rate_10y:      {beta: -0.048, se: 0.009, series: DFII10, transform: level}
+      log_china_imports:  {beta: 0.025,  se: 0.008, series: corn_china_imports, transform: log}
+    # Stage 1: weather -> US yield deviation from trend, % (study section 4, etage 1)
+    yield_factors:
+      jul_extreme_heat_f: -2.58
+      jul_tmax_anom_f:    -0.87
+      aug_extreme_heat_f: -2.85
+    weather_season_months: [6, 7, 8, 9]
+    demand_rationing_elasticity: -0.15   # use falls 1.5 % for +10 % price (keeps +15 % as a ceiling)
+    # Used only if the USDA yield history (PSD) is not available: ~181 bu/acre in 2026 (study)
+    trend_yield: {base_year: 2026, base: 181.0, slope: 1.9}
+    # Weight of OUR weather yield vs USDA's yield, by month (USDA surveys take over from August)
+    nowcast_weight_by_month: {6: 1.0, 7: 1.0, 8: 0.6, 9: 0.4, 10: 0.2}
+    weather_points:
+      # Corn Belt points (IA, IL, NE, MN, IN) - study uses the average of these states
+      - {name: Iowa,      lat: 42.03, lon: -93.47}
+      - {name: Illinois,  lat: 40.12, lon: -88.83}
+      - {name: Nebraska,  lat: 40.92, lon: -98.34}
+      - {name: Minnesota, lat: 44.16, lon: -94.00}
+      - {name: Indiana,   lat: 40.27, lon: -86.13}
+
+  soybeans:
+    enabled: false            # roadmap stage 2
+    group: grains
+    label: "Soybeans (CBOT)"
+    model: grain_two_stage
+    price_unit: "cents/bu"
+    deflator: CPIAUCSL
+    catalysts: [WASDE, GRAIN_STOCKS, ACREAGE, PROSPECTIVE_PLANTINGS]  # weekly Crop Progress shown in calendar only
+    major_reports: [WASDE, GRAIN_STOCKS, ACREAGE, PROSPECTIVE_PLANTINGS]
+    jump_allowance: 70.0      # VERIFY
+    yahoo_symbol: "ZS=F"
+    contracts:
+      micro:    {symbol: MZS, exchange: CBOT, point_value_usd: 5.0,  tick: 0.5,  multiplier: 500}
+      standard: {symbol: ZS,  exchange: CBOT, point_value_usd: 50.0, tick: 0.25, multiplier: 5000}
+    options_symbol: OZS
+    roll_business_days_before_expiry: 10
+    price_factors:
+      log_usd:              {beta: -1.58,  se: 0.229, series: DTWEXBGS, transform: log}
+      log_stocks_to_use:    {beta: -0.22,  se: 0.045, series: soybeans_stocks_to_use_nowcast, transform: log}
+      real_rate_10y:        {beta: -0.044, se: 0.010, series: DFII10, transform: level}
+      log_brazil_production: {beta: 0.14,  se: 0.064, series: soybeans_brazil_production, transform: log, control_only: true}
+    yield_factors:
+      jul_precip_anom_in:   2.07
+      aug_precip_deficit_in: -3.59
+    weather_season_months: [6, 7, 8, 9]
+    demand_rationing_elasticity: -0.10
+    trend_yield: {base_year: 2026, base: 52.5, slope: 0.45}   # VERIFY
+    nowcast_weight_by_month: {7: 0.8, 8: 0.8, 9: 0.5, 10: 0.2}
+    weather_points:
+      - {name: Iowa,      lat: 42.03, lon: -93.47}
+      - {name: Illinois,  lat: 40.12, lon: -88.83}
+      - {name: Nebraska,  lat: 40.92, lon: -98.34}
+      - {name: Minnesota, lat: 44.16, lon: -94.00}
+      - {name: Indiana,   lat: 40.27, lon: -86.13}
+
+  wheat:
+    enabled: false            # roadmap stage 3
+    group: grains
+    label: "SRW Wheat (CBOT)"
+    model: grain_two_stage
+    price_unit: "cents/bu"
+    deflator: CPIAUCSL
+    catalysts: [WASDE, GRAIN_STOCKS]
+    major_reports: [WASDE, GRAIN_STOCKS]
+    jump_allowance: 45.0      # VERIFY
+    yahoo_symbol: "ZW=F"
+    contracts:
+      micro:    {symbol: MZW, exchange: CBOT, point_value_usd: 5.0,  tick: 0.5,  multiplier: 500}
+      standard: {symbol: ZW,  exchange: CBOT, point_value_usd: 50.0, tick: 0.25, multiplier: 5000}
+    options_symbol: OZW
+    roll_business_days_before_expiry: 10
+    price_factors:
+      log_usd:               {beta: -1.94,  se: 0.190, series: DTWEXBGS, transform: log}
+      real_rate_10y:         {beta: -0.075, se: 0.011, series: DFII10, transform: level}
+      log_world_ex_us_china_su: {beta: -0.75, se: 0.234, series: wheat_world_ex_us_china_su, transform: log}
+    yield_factors: {}         # weather model too weak (R2 0.12) - not used for trading
+    weather_season_months: []
+    weather_points: []
+
+  wti:
+    enabled: false            # roadmap stage 4 ("plus tard") - monitor only
+    group: energy
+    label: "WTI crude (NYMEX)"
+    model: oil_weekly_event
+    price_unit: "USD/bbl"
+    deflator: CPIAUCSL
+    catalysts: [EIA_WPSR, OPEC]
+    major_reports: [OPEC]
+    jump_allowance: 4.0
+    yahoo_symbol: "CL=F"
+    contracts:
+      micro:    {symbol: MCL, exchange: NYMEX, point_value_usd: 100.0,  tick: 0.01, multiplier: 100}
+      standard: {symbol: CL,  exchange: NYMEX, point_value_usd: 1000.0, tick: 0.01, multiplier: 1000}
+    options_symbol: LO
+    roll_business_days_before_expiry: 5
+    # Weekly event model, Wednesday->Wednesday % change of WTI (study section 3)
+    event_factors:
+      d_vix_pts:                 {beta: -0.44,  series: VIXCLS}
+      d_usd_pct:                 {beta: -1.65,  series: DTWEXBGS}
+      crude_stocks_sa_change_mb: {beta: -0.096, series: eia_crude_stocks}
+      cushing_sa_change_mb:      {beta: -0.24,  series: eia_cushing_stocks}
+      d_us_production_100kbd:    {beta: -0.18,  series: eia_us_production}
+      d_henry_hub_pct:           {beta: 0.02,   series: DHHNGSP}
+
+  lean_hogs:
+    enabled: false            # roadmap stage 3, options spreads only
+    group: livestock
+    label: "Lean hogs (CME)"
+    model: not_implemented    # annual model only - needs quarterly rebuild (study section 6)
+    contracts:
+      standard: {symbol: HE, exchange: CME, point_value_usd: 400.0, tick: 0.025, multiplier: 40000}
+
+  live_cattle:
+    enabled: false
+    group: livestock
+    label: "Live cattle (CME)"
+    model: not_implemented
+    contracts:
+      standard: {symbol: LE, exchange: CME, point_value_usd: 400.0, tick: 0.025, multiplier: 40000}
+
+# --- Paths -------------------------------------------------------------------
+paths:
+  database: data/store.sqlite
+  daily_output_dir: output/daily
+  history_workbook: output/history/master_history.xlsx
+  wasde_input: input/wasde_balance.csv
+  calendar_input: input/calendar.csv

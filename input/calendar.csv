@@ -1,0 +1,27 @@
+# Dated catalysts. Weekly reports (EIA on Wednesdays, Crop Progress on Mondays Apr-Nov,
+# Export Sales on Thursdays) are generated automatically - list only the dated ones here.
+# verified=no -> date taken from the usual USDA pattern: CHECK it on
+#   https://www.usda.gov/oce/commodity/wasde  and  https://www.nass.usda.gov/Publications/Calendar/
+# time_et = New York time. markets = comma-free list separated by '|'.
+date,event,markets,time_et,verified
+2026-11-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2026-12-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2026-12-23,HOGS_AND_PIGS,lean_hogs,15:00,no
+2027-01-12,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-01-12,GRAIN_STOCKS,corn|soybeans|wheat,12:00,no
+2027-02-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-03-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-03-31,PROSPECTIVE_PLANTINGS,corn|soybeans|wheat,12:00,no
+2027-03-31,GRAIN_STOCKS,corn|soybeans|wheat,12:00,no
+2027-04-09,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-05-12,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-06-11,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-06-30,ACREAGE,corn|soybeans|wheat,12:00,no
+2027-06-30,GRAIN_STOCKS,corn|soybeans|wheat,12:00,no
+2027-07-12,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-08-12,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-09-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-09-30,GRAIN_STOCKS,corn|soybeans|wheat,12:00,no
+2027-10-12,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-11-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no
+2027-12-10,WASDE,corn|soybeans|wheat|lean_hogs|live_cattle,12:00,no

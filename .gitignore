@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+~$*.xlsx
+# The SQLite store is large and re-buildable (market data re-downloads; signals,
+# journal and equity are rebuilt from the Excel files with `commodity-algo rebuild-from-excel`).
+data/*.sqlite
+# Excel outputs ARE committed on purpose: they are the durable history of the algo.
