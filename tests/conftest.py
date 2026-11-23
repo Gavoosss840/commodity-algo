@@ -44,7 +44,7 @@ def _make_store(store: Store, settings, end="2026-11-20", seed=7):
 
     # weather: seasonal cycle + noise, 5 points, from 1990
     wdays = pd.date_range("1990-01-01", pd.Timestamp(end) - pd.Timedelta(days=6))
-    doy = wdays.dayofyear.values
+    doy = wdays.day_of_year.values
     for pt in settings.markets["corn"]["weather_points"]:
         tmax = 60 + 25 * np.sin((doy - 105) / 365 * 2 * np.pi) + rng.normal(0, 6, len(wdays))
         prcp = np.clip(rng.gamma(0.5, 0.25, len(wdays)), 0, None)
